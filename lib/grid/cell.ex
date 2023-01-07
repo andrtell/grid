@@ -66,6 +66,12 @@ defmodule Grid.Cell do
     }
   end
 
+  @spec empty(Keyword.t()) :: t
+  def empty(options \\ []) do
+    options = Keyword.merge([empty: true], options)
+    new(nil, options)
+  end
+
   ##############################################################################
   #
   # default_options/1
