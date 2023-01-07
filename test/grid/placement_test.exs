@@ -277,15 +277,15 @@ defmodule Grid.PlacementTest do
     assert Placement.place_cells(
              [
                Cell.new(nil, row_span: 3, column_span: 3),
-               Cell.new(nil, row_span: 1, column_span: 1),
+               Cell.new(nil, row_span: 1, column_span: 1)
              ],
              column_count: 4
            ) ==
              {
                [
-                Cell.new(nil, row: 0, column: 0, row_span: 3, column_span: 3),
-                Cell.new(nil, row: 0, column: 3, row_span: 1, column_span: 1),
-                Cell.empty(row: 1, column: 3, row_span: 2, column_span: 1)
+                 Cell.new(nil, row: 0, column: 0, row_span: 3, column_span: 3),
+                 Cell.new(nil, row: 0, column: 3, row_span: 1, column_span: 1),
+                 Cell.empty(row: 1, column: 3, row_span: 2, column_span: 1)
                ],
                3,
                4

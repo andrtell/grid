@@ -73,8 +73,8 @@ defmodule Grid.Lines do
           {4, 4} => %{up: 1, down: 0, left: 1, right: 0}
        }
   """
-  @spec create_lines(cells :: Cell.t(), options :: Keyword.t()) :: map
-  def create_lines(cells, options \\ []) do
+  @spec create_lines(cells :: Cell.t(), T.size(), T.size(), options :: Keyword.t()) :: map
+  def create_lines(cells, row_count, column_count, options \\ []) do
     options = default_options(options)
 
     row_gap = options[:row_gap]
@@ -84,16 +84,34 @@ defmodule Grid.Lines do
     column_gap_right = div(column_gap, 2)
     column_gap_left = column_gap - column_gap_right
 
-    create_lines(
-      cells,
-      [],
-      [],
-      %{},
-      row_gap_top,
-      row_gap_bottom,
-      column_gap_left,
-      column_gap_right
-    )
+    line_selector = options[:line_selector]
+
+    if line_selector != nil do
+      create_lines_with_line_selector(
+        cells,
+        [],
+        [],
+        %{},
+        row_gap_top,
+        row_gap_bottom,
+        column_gap_left,
+        column_gap_right,
+        row_count,
+        column_count,
+        line_selector
+      )
+    else
+      create_lines(
+        cells,
+        [],
+        [],
+        %{},
+        row_gap_top,
+        row_gap_bottom,
+        column_gap_left,
+        column_gap_right
+      )
+    end
   end
 
   ##############################################################################
@@ -105,7 +123,8 @@ defmodule Grid.Lines do
     Keyword.merge(
       [
         row_gap: 1,
-        column_gap: 1
+        column_gap: 1,
+        line_selector: nil
       ],
       options
     )
@@ -170,6 +189,159 @@ defmodule Grid.Lines do
       row_gap_bottom,
       column_gap_left,
       column_gap_right
+    )
+  end
+
+  ##############################################################################
+  #
+  # create_lines_with_line_selector/9
+  #
+  defp create_lines_with_line_selector(
+         [],
+         hs,
+         vs,
+         is,
+         _row_gap_top,
+         _row_gap_bottom,
+         _column_gap_left,
+         _column_gap_right,
+         _row_count,
+         _column_count,
+         _line_selector
+       ) do
+    hs = merge_segments(hs) |> Enum.map(fn [y, x1, x2] -> [{x1, y}, {x2, y}] end)
+    vs = merge_segments(vs) |> Enum.map(fn [x, y1, y2] -> [{x, y1}, {x, y2}] end)
+
+    %{horizontal_lines: hs, vertical_lines: vs, intersections: is}
+  end
+
+  defp create_lines_with_line_selector(
+         [cell | cells],
+         hs,
+         vs,
+         is,
+         row_gap_top,
+         row_gap_bottom,
+         column_gap_left,
+         column_gap_right,
+         row_count,
+         column_count,
+         line_selector
+       ) do
+    x_l = cell.x - column_gap_left
+    x_r = cell.x + cell.cell_width + column_gap_right
+    y_t = cell.y - row_gap_top
+    y_b = cell.y + cell.cell_height + row_gap_bottom
+
+    selected_lines = line_selector.(cell, row_count, column_count)
+
+    hs =
+      case selected_lines do
+        %{top: 1, bottom: 1} ->
+          [[y_t, x_l, x_r], [y_b, x_l, x_r] | hs]
+
+        %{top: 1} ->
+          [[y_t, x_l, x_r] | hs]
+
+        %{bottom: 1} ->
+          [[y_b, x_l, x_r] | hs]
+
+        _ ->
+          hs
+      end
+
+    vs =
+      case selected_lines do
+        %{left: 1, right: 1} ->
+          [[x_l, y_t, y_b], [x_r, y_t, y_b] | vs]
+
+        %{left: 1} ->
+          [[x_l, y_t, y_b] | vs]
+
+        %{right: 1} ->
+          [[x_r, y_t, y_b] | vs]
+
+        _ ->
+          vs
+      end
+
+    m =
+      case selected_lines do
+        %{left: 1, top: 1, right: 1, bottom: 1} ->
+          %{
+            {x_l, y_t} => %{right: 1, down: 1},
+            {x_r, y_t} => %{left: 1, down: 1},
+            {x_l, y_b} => %{right: 1, up: 1},
+            {x_r, y_b} => %{left: 1, up: 1}
+          }
+
+        %{top: 1, right: 1, bottom: 1} ->
+          %{
+            {x_r, y_t} => %{left: 1, down: 1},
+            {x_r, y_b} => %{left: 1, up: 1}
+          }
+
+        %{left: 1, right: 1, bottom: 1} ->
+          %{
+            {x_l, y_b} => %{right: 1, up: 1},
+            {x_r, y_b} => %{left: 1, up: 1}
+          }
+
+        %{left: 1, top: 1, bottom: 1} ->
+          %{
+            {x_l, y_t} => %{right: 1, down: 1},
+            {x_l, y_b} => %{right: 1, up: 1},
+          }
+
+        %{left: 1, top: 1, right: 1} ->
+          %{
+            {x_l, y_t} => %{right: 1, down: 1},
+            {x_r, y_t} => %{left: 1, down: 1},
+          }
+
+        %{left: 1, top: 1} ->
+          %{
+            {x_l, y_t} => %{right: 1, down: 1},
+          }
+
+        %{top: 1, right: 1} ->
+          %{
+            {x_r, y_t} => %{left: 1, down: 1},
+          }
+
+        %{left: 1, bottom: 1} ->
+          %{
+            {x_l, y_b} => %{right: 1, up: 1},
+          }
+
+        %{right: 1, bottom: 1} ->
+          %{
+            {x_r, y_b} => %{left: 1, up: 1}
+          }
+
+        _ ->
+          is
+      end
+
+    is =
+      Map.merge(
+        is,
+        m,
+        fn _, m1, m2 -> Map.merge(m1, m2) end
+      )
+
+    create_lines_with_line_selector(
+      cells,
+      hs,
+      vs,
+      is,
+      row_gap_top,
+      row_gap_bottom,
+      column_gap_left,
+      column_gap_right,
+      row_count,
+      column_count,
+      line_selector
     )
   end
 

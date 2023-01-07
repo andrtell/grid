@@ -85,7 +85,7 @@ defmodule Grid do
     * `Grid.layout/2`
     * `Grid.Lines.create_lines/2`
   """
-  def create_lines(cells, options \\ []) do
-    cells |> Grid.Lines.create_lines(options)
+  def create_lines(cells, row_count, column_count, options \\ []) do
+    cells |> Grid.Lines.create_lines(row_count, column_count, options)
   end
 end
